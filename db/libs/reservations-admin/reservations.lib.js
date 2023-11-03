@@ -10,12 +10,25 @@ module.exports = {
         })
     },
 
-    createOrUpdateCategoryExpense: async (model) => {
+    findAllBookings: async () => {
+        try {
+            const data = await reservationsModel.findAll();
+            const page = 1;
+            const pageSize = 10;
+            const offset = (page - 1) * pageSize;
+            const paginatedData = data.slice(offset, offset + pageSize);
+            return paginatedData.map(flight => flight.dataValues);
+        } catch (error) {
+            console.error('Error al obtener los datos de vuelo:', error);
+            throw error;
+        }
+    },
+
+    createOrUpdateBooking: async (model) => {
         try {
             return new Promise(async (resolve, reject) => {
-                const categoryExpense = model.id ? await categoryExpensesModel.findByPk(model.id) : null;
+                const categoryExpense = model.id ? await reservationsModel.findByPk(model.id) : null;
                 if (categoryExpense) {
-                    // Actualizar el registro existente
                     model.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
                     categoryExpense.update(model)
                         .then(() => resolve({ ...categoryExpense, ...model }))
@@ -26,9 +39,8 @@ module.exports = {
                             reject(err);
                         });
                 } else {
-                    // Crear un nuevo registro
                     model.createdAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
-                    categoryExpensesModel.create(model)
+                    reservationsModel.create(model)
                         .then((result) => resolve(result))
                         .catch((err) => {
                             if (err instanceof Sequelize.UniqueConstraintError) {
@@ -45,44 +57,9 @@ module.exports = {
 
     },
 
-    // createOrUpdateCategoryExpense: async (model) => {
-    //     return new Promise( async (resolve, reject) => {
-    //         const instanceModel = model.id ? await categoryExpensesModel.findOne(
-    //             { where: { id: model.id }}).catch(reject): null;
-    //         if (instanceModel) {
-    //             model.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    //             categoryExpensesModel.update(model, { where: { id: instanceModel } })
-    //                 .then(() => resolve ({...instanceModel, model}))
-    //                 .catch((e = new Sequelize.UniqueConstraintError) => {
-    //                     e.message = 'Email must be unique update'
-    //                     reject(e)
-    //                 }).catch(err => reject(err))
-    //         } else {
-    //             model.createdAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    //             categoryExpensesModel.create(model).then(result => resolve(result))
-    //                 .catch((e = new Sequelize.UniqueConstraintError) => {
-    //                     e.message = 'Email must be unique create'
-    //                     reject(e)
-    //                 }).catch(err => reject(err))
-    //         }
-    //     })
-    // },
-    findCategoryExpenseByUser: async (idUser) => {
-        try {
-            return await categoryExpensesModel.findAll({
-                where: {
-                    idCreatorUser: idUser,
-                    status: {[Op.in]: [1]},
-                },
-                raw: true,
-            })
-        } catch (err) {
-            throw err;
-        }
-    },
     deleteCategoryExpense: async (model) => {
         return new Promise(async (resolve, reject) => {
-            return categoryExpensesModel.update({
+            return reservationsModel.update({
                 updatedAt: dayjs().format('YYYY-MM-DD hh:mm:ss'),
                 status: 0
             }, {

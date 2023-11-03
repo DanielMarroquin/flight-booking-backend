@@ -20,7 +20,6 @@ module.exports = {
                 typeCast: true
             }
         },
-        mongoDB: index.MONGODB_URL
     },
     service: {
         port: process.env.API_PORT,
@@ -31,14 +30,6 @@ module.exports = {
         secret: index.API_SECRET,
         sessionTime: index.API_SESSION_TIME,
         iniCron: index.API_CRON === 'true'
-    },
-    frontend: {
-        url: index.FRONT_BASE_URL
-    },
-    expirationPass: {
-        expirationPassTimeUnit: index.EXPIRATION_PASS_UNIT,
-        expirationPassTimeValue: index.EXPIRATION_PASS_VALUE,
-        expirationRecoveryToken: index.EXPIRATION_RECOVERY_TOKEN
-    },
+    }
 }
 

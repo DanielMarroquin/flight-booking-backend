@@ -1,18 +1,108 @@
 const { Sequelize, where, Op} = require('sequelize');
 const dayjs = require('dayjs');
+const {map} = require('underscore');
 const models = require('../../models');
-const { expensesModel } = models();
+const { flightsModel } = models();
 
 module.exports = {
-    findAllExpense: async (where) => {
-        return expensesModel.findAll({
-            where: { ... where }
-        })
+
+    flights: async () => {
+        return await flightsModel.findAll()
     },
-    createOrUpdateExpenseByUser: async (model) => {
+
+    findAllFlights: async () => {
+        try {
+            const data = await flightsModel.findAll({
+                attributes: [
+                    'id',
+                    'origin',
+                    'destination',
+                    'departureTime',
+                    'arrivalTime',
+                    'price',
+                    'isAvailable',
+                    'createdAt',
+                ]
+            });
+            const page = 1;
+            const pageSize = 10;
+            const offset = (page - 1) * pageSize;
+            const paginatedData = data.slice(offset, offset + pageSize);
+            return paginatedData.map(flight => flight.dataValues);
+        } catch (error) {
+            console.error('Error al obtener los datos de vuelo:', error);
+            throw error;
+        }
+    },
+
+
+    findAll: async ({ where, page, pageSize }) => {
+        const offset = pageSize * page;
+        const limit =  pageSize;
+        let whereQuery = {};
+        map(where, (value, key) => {
+            if (value) {
+                whereQuery[key] = { [Op.like]: `%${value}%` };
+            }
+        });
+
+        const result = await flightsModel.findAndCountAll({
+            where: { ...whereQuery },
+            offset,
+            limit
+        });
+
+        const data = result.rows.map(flight => flight.dataValues); // Aquí obtienes los dataValues de cada objeto flights
+
+        return {
+            count: result.count,
+            rows: data
+        };
+    },
+
+
+    listAllFlights: async ({ where, page, pageSize }) => {
+        try {
+            const offset = pageSize * (page - 1);
+            const limit = pageSize;
+            let whereQuery = {};
+            Object.keys(where).forEach((key) => {
+                if (where[key]) {
+                    whereQuery[key] = { [Op.like]: `${where[key]}%` };
+                }
+            });
+
+            const attributes = [
+                'id',
+                'origin',
+                'destination',
+                'departureTime',
+                'arrivalTime',
+                'price',
+                'isAvailable',
+                'createdAt',
+            ];
+
+            const { count, rows } = await flightsModel.findAndCountAll({
+                attributes,
+                where: { ...whereQuery },
+                offset,
+                limit,
+                raw: true,
+            });
+
+            return { count, flights: rows };
+        } catch (error) {
+            console.error(error, 'Error in list flights');
+            throw new Error('Error occurred.');
+        }
+    },
+
+
+    createOrUpdateFlight: async (model) => {
         try {
             return new Promise(async (resolve, reject) => {
-                const expenseModel = model.id ? await expensesModel.findByPk(model.id) : null;
+                const expenseModel = model.id ? await flightsModel.findByPk(model.id) : null;
                 if (expenseModel) {
                     model.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
                     expenseModel.update(model)
@@ -25,7 +115,7 @@ module.exports = {
                         });
                 } else {
                     model.createdAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
-                    expensesModel.create(model)
+                    flightsModel.create(model)
                         .then((result) => resolve(result))
                         .catch((err) => {
                             if (err instanceof Sequelize.UniqueConstraintError) {
@@ -40,44 +130,20 @@ module.exports = {
         }
     },
 
-    findExpensesByIdUser: async (userId) => {
+
+    deleteFlight: async (idFlight) => {
         try {
-            const expenses = await expensesModel.findAll({
-                where: {
-                    user_id: userId,
-                    status: { [Op.in]: [1] },
-                },
-                raw: true,
-            });
-
-            const totalAmount = expenses.reduce((total, expense) => {
-                return total + parseFloat(expense.amount);
-            }, 0);
-
-            return {
-                expenses,
-                totalAmount,
-            };
-        } catch (err) {
-            throw err;
-        }
-    },
-
-
-    deleteExpenseByUser: async (idExpense) => {
-        try {
-            const result = await expensesModel.update(
+            return await flightsModel.update(
                 {
                     updatedAt: dayjs().format('YYYY-MM-DD hh:mm:ss'),
                     status: 0
                 },
                 {
                     where: {
-                        id: idExpense
+                        id: idFlight
                     }
                 }
-            );
-            return result
+            )
         } catch (err) {
             throw err;
         }
